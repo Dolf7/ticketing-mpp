@@ -1,4 +1,5 @@
 import { google, sheets_v4 } from "googleapis";
+import SpreadsheetConfig from "./spreadsheet.config";
 
 export default class TicketingSpreadsheet {
     private _sheetSelection: string;
@@ -9,6 +10,10 @@ export default class TicketingSpreadsheet {
     }
 
     public async CreateConnection(): Promise<void> {
+        // ensure the credentials exist
+        SpreadsheetConfig.ensureSecretsGapiJson()
+
+        // Configure
         const auth = await google.auth.getClient({ scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
         this._spreadsheets = google.sheets({ version: 'v4', auth });
     }
