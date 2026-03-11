@@ -18,7 +18,7 @@ function escapeXml(unsafe: string) {
 }
 
 export async function composeTicketImage(options: { templatePath?: string; qrBuffer: Buffer; buyerName: string; ticketCode: string; }): Promise<Buffer> {
-  const templatePath = options.templatePath ?? path.join(process.cwd(), 'public', 'generated-ticket', 'Kupon-Ticket-Template.jpg');
+  const templatePath = options.templatePath ?? path.join(process.cwd(), 'public', 'ticket-template', 'Kupon-Ticket-Template.jpg');
   const qrBuffer = options.qrBuffer;
   const buyerName = options.buyerName ?? '';
   const ticketCode = options.ticketCode ?? '';
