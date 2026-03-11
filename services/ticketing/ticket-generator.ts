@@ -1,6 +1,9 @@
 import TicketingSpreadsheet from "../spreadSheet/ticketing-spreadsheet";
 import QRCode from 'qrcode';
 import composeTicketImage from './ticket-image';
+import createLogger from '../logger';
+
+const logger = createLogger('TicketGenerator');
 
 export default class TicketGenerator {
     private ticketing: TicketingSpreadsheet
@@ -9,8 +12,9 @@ export default class TicketGenerator {
         this.ticketing = new TicketingSpreadsheet("Ticket");
     }
 
-    public async generateTicket(rowNumber: number): Promise<{ code: string | null, image?: { fileName: string, buffer: Buffer } | null }> {
+    public async generateTicket(rowNumber: number): Promise<{ code: string | null, image?: { fileName: string, buffer: Buffer } | null, error?: string | null }> {
         try {
+                logger.info('generateTicket start', { rowNumber });
             await this.ticketing.CreateConnection();
 
             const colD = await this.ticketing.GetSheetSingelRange(`D${rowNumber}`);
@@ -41,8 +45,9 @@ export default class TicketGenerator {
 
             if (errors.length > 0) {
                 const errMsg = errors.join(' | ');
+                logger.warn('Validation failed', { rowNumber, errors });
                 await this.ticketing.UpdateSheetSingleRange(`Q${rowNumber}`, errMsg);
-                return { code: null, image: null };
+                return { code: null, image: null, error: errMsg };
             }
 
             // If a ticket code already exists in column O, use it to generate the image
@@ -53,6 +58,7 @@ export default class TicketGenerator {
                 const qrBuffer = await QRCode.toBuffer(code, { type: 'png' });
 
                 // compose final ticket image (template + qr + name + code)
+                logger.info('Composing ticket image using existing code', { code, rowNumber });
                 const composed = await composeTicketImage({ qrBuffer, buyerName: String(buyerName), ticketCode: code });
 
                 // clear any previous error in Q cell
@@ -60,7 +66,8 @@ export default class TicketGenerator {
                 // keep existing O value; just clear P (if used for temp/upload status)
                 await this.ticketing.UpdateSheetSingleRange(`P${rowNumber}`, '');
 
-                return { code, image: { fileName, buffer: composed } };
+                logger.info('Ticket image generated (existing code)', { code, rowNumber });
+                return { code, image: { fileName, buffer: composed }, error: null };
             }
 
             const rawPrefix = String(buyerName).trim();
@@ -73,6 +80,7 @@ export default class TicketGenerator {
             // generate QR into a buffer (no filesystem required)
             const qrBuffer = await QRCode.toBuffer(code, { type: 'png' });
 
+            logger.info('Composing ticket image', { code, rowNumber });
             // compose final ticket image (template + qr + name + code)
             const buffer = await composeTicketImage({ qrBuffer, buyerName: String(buyerName), ticketCode: code });
 
@@ -81,13 +89,15 @@ export default class TicketGenerator {
 
             // write generated code to column O; do not upload to Drive in this environment
             await this.ticketing.UpdateSheetSingleRange(`O${rowNumber}`, code);
+            logger.info('Ticket generated and saved to sheet', { code, rowNumber });
             await this.ticketing.UpdateSheetSingleRange(`P${rowNumber}`, '');
 
-            return { code, image: { fileName, buffer } };
+            return { code, image: { fileName, buffer }, error: null };
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
+            logger.error('generateTicket exception', { rowNumber, error: msg });
             try { await this.ticketing.UpdateSheetSingleRange(`Q${rowNumber}`, `Exception: ${msg}`); } catch { }
-            return { code: null, image: null };
+            return { code: null, image: null, error: msg };
         }
     }
 

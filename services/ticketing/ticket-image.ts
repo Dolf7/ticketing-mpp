@@ -1,5 +1,8 @@
 import sharp from 'sharp';
 import path from 'path';
+import createLogger from '../logger';
+
+const logger = createLogger('TicketImage');
 
 function escapeXml(unsafe: string) {
   return unsafe.replace(/[&<>"']/g, (c) => {
@@ -21,6 +24,7 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
   const ticketCode = options.ticketCode ?? '';
 
   // Load template and read metadata
+  logger.debug('composeTicketImage called', { templatePath, buyerName: options.buyerName, ticketCode: options.ticketCode });
   const template = sharp(templatePath);
   const meta = await template.metadata();
   const width = meta.width ?? 1000;
@@ -88,6 +92,7 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
   </svg>`;
 
   // Composite the layers: template -> white bg -> QR -> text
+  logger.debug('Compositing image', { qrLeft, qrTop, qrSize, bgLeft, bgTop, bgWidth, bgHeight });
   const composed = await template
     .composite([
       { input: Buffer.from(bgSvg), top: 0, left: 0 },
@@ -97,6 +102,7 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
     .png()
     .toBuffer();
 
+  logger.info('composeTicketImage completed', { buyerName, ticketCode, outSize: composed.length });
   return composed;
 }
 

@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import getAuthClient from './google-auth';
+import createLogger from '../logger';
+
+const logger = createLogger('TicketingGDrive');
 
 export default class TicketingGDrive {
     private _driveId: string | null;
@@ -19,9 +22,13 @@ export default class TicketingGDrive {
         // get auth client (supports SECRET_GAPI_JSON env or secrets-gapi.json file)
         const auth = await getAuthClient(scopes);
 
-        if (!auth) throw new Error('No Google auth credentials found (SECRET_GAPI_JSON / GAPI_CREDENTIALS_JSON, secrets-gapi.json, or GDRIVE_API_KEY)');
+        if (!auth) {
+            logger.error('No Google auth credentials found');
+            throw new Error('No Google auth credentials found (SECRET_GAPI_JSON / GAPI_CREDENTIALS_JSON, secrets-gapi.json, or GDRIVE_API_KEY)');
+        }
 
         this._drive = google.drive({ version: 'v3', auth });
+        logger.info('Drive connection created');
     }
 
 
@@ -67,10 +74,12 @@ export default class TicketingGDrive {
                 supportsAllDrives: true,
             });
         } catch (e) {
-            // ignore
+            logger.warn('Failed to set file permissions', e);
         }
 
         const meta = await this._drive.files.get({ fileId, fields: 'webViewLink, webContentLink', supportsAllDrives: true });
-        return meta.data.webViewLink ?? meta.data.webContentLink ?? `https://drive.google.com/file/d/${fileId}/view`;
+        const link = meta.data.webViewLink ?? meta.data.webContentLink ?? `https://drive.google.com/file/d/${fileId}/view`;
+        logger.info('File uploaded', { fileId, link });
+        return link;
     }
 }

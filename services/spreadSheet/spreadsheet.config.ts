@@ -1,6 +1,9 @@
 import fs from "fs";
 import { promises as fsp } from "fs";
 import path from "path";
+import createLogger from '../logger';
+
+const logger = createLogger('SpreadsheetConfig');
 
 export class SpreadsheetConfig {
 	/**
@@ -17,6 +20,7 @@ export class SpreadsheetConfig {
 		} catch (_) {
 			const envVal = process.env.SECRET_GAPI_JSON;
 			if (!envVal) {
+				logger.error('SECRET_GAPI_JSON not set and secrets-gapi.json missing');
 				throw new Error(
 					"Environment variable SECRET_GAPI_JSON is not set; cannot create secrets-gapi.json"
 				);
@@ -40,6 +44,7 @@ export class SpreadsheetConfig {
 			}
 
 			await fsp.writeFile(filePath, content, { encoding: "utf8", mode: 0o600 });
+			logger.info('wrote secrets-gapi.json to disk', { filePath });
 		}
 	}
 }

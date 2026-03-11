@@ -1,6 +1,9 @@
 import { google } from "googleapis";
 import fs from "fs";
 import path from "path";
+import createLogger from '../logger';
+
+const logger = createLogger('GoogleAuth');
 
 export async function getAuthClient(scopes: string[]) {
   const keyFilePath =
@@ -21,6 +24,7 @@ export async function getAuthClient(scopes: string[]) {
         const decoded = Buffer.from(envJson, "base64").toString("utf8");
         parsed = JSON.parse(decoded);
       } catch (err) {
+        logger.error('Failed to parse service account JSON from environment variable');
         throw new Error(
           "Failed to parse service account JSON from environment variable",
         );
@@ -33,10 +37,11 @@ export async function getAuthClient(scopes: string[]) {
 
   // 2) key file on disk
   if (fs.existsSync(keyFilePath)) {
+    logger.info('Using key file for Google auth', { keyFilePath });
     const gauth = new google.auth.GoogleAuth({ keyFile: keyFilePath, scopes });
     return gauth;
   }
-
+  logger.error('No Google credentials found');
   throw new Error(
     "No Google credentials found: set SECRET_GAPI_JSON or provide a secrets-gapi.json file",
   );

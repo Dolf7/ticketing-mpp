@@ -25,8 +25,9 @@ export async function GET(request: Request) {
     const result = await generator.generateTicket(row);
 
     if (!result.image) {
+      const errDetail = result.error ?? 'Image not generated';
       return NextResponse.json(
-        { success: false, error: 'Image not generated' },
+        { success: false, error: errDetail },
         { status: 422 },
       );
     }

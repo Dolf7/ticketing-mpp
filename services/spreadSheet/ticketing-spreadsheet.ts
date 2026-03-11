@@ -1,6 +1,9 @@
 import { google, sheets_v4 } from "googleapis";
 import getAuthClient from './google-auth';
 import SpreadsheetConfig from "./spreadsheet.config";
+import createLogger from '../logger';
+
+const logger = createLogger('TicketingSpreadsheet');
 
 export default class TicketingSpreadsheet {
     private _sheetSelection: string;
@@ -12,9 +15,11 @@ export default class TicketingSpreadsheet {
 
     public async CreateConnection(): Promise<void> {
         // get auth client (supports SECRET_GAPI_JSON env or secrets-gapi.json file)
+        logger.debug('Creating spreadsheet connection');
         const auth = await getAuthClient(['https://www.googleapis.com/auth/spreadsheets']);
 
         this._spreadsheets = google.sheets({ version: 'v4', auth });
+        logger.info('Spreadsheet connection created');
     }
 
     public async GetSheetSingelRange(range: string): Promise<sheets_v4.Schema$ValueRange | null> {
@@ -37,6 +42,8 @@ export default class TicketingSpreadsheet {
             requestBody: { values: [[value]] },
         });
 
+        logger.debug('Updated sheet single range', { range: fixRange, value });
+
         return true;
     }
 
@@ -56,6 +63,7 @@ export default class TicketingSpreadsheet {
             range,
         });
 
+        logger.debug('Fetched sheet range', { range });
         return response.data ?? null;
     }
 }
