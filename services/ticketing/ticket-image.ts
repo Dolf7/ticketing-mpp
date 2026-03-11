@@ -83,12 +83,13 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
   const textSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <svg width="${effectiveWidth}" height="${effectiveHeight}" xmlns="http://www.w3.org/2000/svg">
     <style>
-      .name { fill: #FFFFFF; font-family: 'Georgia', serif; font-weight: 700; font-size: ${nameFont}px; letter-spacing: 1px; }
-      .code { fill: #FFFFFF; font-family: 'Georgia', serif; font-size: ${codeFont}px; }
+      /* Use a general font stack with common fallbacks; avoids missing glyphs on server */
+      .name { fill: #FFFFFF; font-family: 'Noto Sans', Arial, Helvetica, sans-serif; font-weight: 700; font-size: ${nameFont}px; letter-spacing: 1px; }
+      .code { fill: #FFFFFF; font-family: 'Noto Sans', Arial, Helvetica, sans-serif; font-size: ${codeFont}px; }
     </style>
-    <text x="50%" y="${nameY}" text-anchor="middle" class="name">${safeName}</text>
+    <text x="50%" y="${nameY}" text-anchor="middle" dominant-baseline="alphabetic" class="name">${safeName}</text>
     <rect x="${lineX}" y="${lineY}" width="${lineWidth}" height="${lineHeight}" fill="#FFFFFF" rx="${Math.ceil(lineHeight/2)}" />
-    <text x="50%" y="${codeY}" text-anchor="middle" class="code">${safeCode}</text>
+    <text x="50%" y="${codeY}" text-anchor="middle" dominant-baseline="alphabetic" class="code">${safeCode}</text>
   </svg>`;
 
   // Composite the layers: template -> white bg -> QR -> text
