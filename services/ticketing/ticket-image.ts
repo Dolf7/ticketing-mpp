@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import path from 'path';
+import fs from 'fs/promises';
 import createLogger from '../logger';
 
 const logger = createLogger('TicketImage');
@@ -72,6 +73,32 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
   const safeName = escapeXml((buyerName || '').toUpperCase());
   const safeCode = escapeXml(ticketCode);
 
+  // Embed `Helvetica` from `public/font/Helvetica.ttf` (case-insensitive) to avoid tofu on deploy.
+  let embeddedFontCss = '';
+  try {
+    const fontDir = path.join(process.cwd(), 'public', 'font');
+    const files = await fs.readdir(fontDir);
+    // Prefer an explicit Helvetica file; allow common extensions and case-insensitive match.
+    const helvFile = files.find((f) => /^helvetica\.(ttf|tff|otf|woff2|woff)$/i.test(f));
+    if (helvFile) {
+      const fontPath = path.join(fontDir, helvFile);
+      const fontBuffer = await fs.readFile(fontPath);
+      const ext = path.extname(helvFile).toLowerCase().replace('.', '');
+      // Normalize a common typo `.tff` to `ttf` and choose proper format/mime
+      const normExt = ext === 'tff' ? 'ttf' : ext;
+      const mime = normExt === 'ttf' ? 'font/ttf' : normExt === 'otf' ? 'font/otf' : normExt === 'woff' ? 'font/woff' : 'font/woff2';
+      const format = normExt === 'ttf' ? 'truetype' : normExt === 'otf' ? 'opentype' : normExt;
+      const base64 = fontBuffer.toString('base64');
+      // Register the font with the literal name `Helvetica` so the SVG uses that family exactly.
+      embeddedFontCss = `@font-face { font-family: 'Helvetica'; src: url('data:${mime};base64,${base64}') format('${format}'); font-weight: 400; font-style: normal; }`;
+      logger.debug('Helvetica font embedded for SVG', { helvFile });
+    } else {
+      logger.debug('Helvetica font not found in public/font');
+    }
+  } catch (err) {
+    logger.debug('Error embedding Helvetica font', { err: String(err) });
+  }
+
   // SVG for white rounded background behind QR
   const bgRadius = Math.round(Math.min(bgWidth, bgHeight) * 0.06);
   const bgSvg = `<?xml version="1.0" encoding="UTF-8"?>
@@ -83,9 +110,10 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
   const textSvg = `<?xml version="1.0" encoding="UTF-8"?>
   <svg width="${effectiveWidth}" height="${effectiveHeight}" xmlns="http://www.w3.org/2000/svg">
     <style>
+      ${embeddedFontCss}
       /* Use a general font stack with common fallbacks; avoids missing glyphs on server */
-      .name { fill: #FFFFFF; font-family: 'Noto Sans', Arial, Helvetica, sans-serif; font-weight: 700; font-size: ${nameFont}px; letter-spacing: 1px; }
-      .code { fill: #FFFFFF; font-family: 'Noto Sans', Arial, Helvetica, sans-serif; font-size: ${codeFont}px; }
+      .name { fill: #FFFFFF; font-family: Helvetica; font-weight: 700; font-size: ${nameFont}px; letter-spacing: 1px; }
+      .code { fill: #FFFFFF; font-family: Helvetica; font-size: ${codeFont}px; }
     </style>
     <text x="50%" y="${nameY}" text-anchor="middle" dominant-baseline="alphabetic" class="name">${safeName}</text>
     <rect x="${lineX}" y="${lineY}" width="${lineWidth}" height="${lineHeight}" fill="#FFFFFF" rx="${Math.ceil(lineHeight/2)}" />
