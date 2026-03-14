@@ -26,6 +26,17 @@ export async function composeTicketImage(options: { templatePath?: string; qrBuf
 
   // Load template and read metadata
   logger.debug('composeTicketImage called', { templatePath, buyerName: options.buyerName, ticketCode: options.ticketCode });
+  // Ensure fontconfig can find a config (avoids "Fontconfig error: Cannot load default config file")
+  try {
+    const defaultFontDir = path.join(process.cwd(), 'public', 'font');
+    if (!process.env.FONTCONFIG_PATH) {
+      process.env.FONTCONFIG_PATH = defaultFontDir;
+      logger.debug('Set FONTCONFIG_PATH for fontconfig', { FONTCONFIG_PATH: process.env.FONTCONFIG_PATH });
+    }
+  } catch (e) {
+    logger.debug('Error setting FONTCONFIG_PATH', { err: String(e) });
+  }
+
   const template = sharp(templatePath);
   const meta = await template.metadata();
   const width = meta.width ?? 1000;
