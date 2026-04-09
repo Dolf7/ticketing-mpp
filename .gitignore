@@ -41,5 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 secrets-gapi.json
+mpp-prod-api-secret.json
 
 public/generated-ticket

@@ -1,31 +1,26 @@
 import { NextResponse } from "next/server";
-import TicketGenerator from "../../../../services/ticketing/ticket-generator";
+import TicketGenerator from "../../../../../services/ticketing/ticket-generator";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const rowParam = url.searchParams.get("row");
+    const name = url.searchParams.get("name");
+    const wijk = url.searchParams.get("wijk");
+    const phoneNumber = url.searchParams.get("phoneNumber");
 
-    if (!rowParam)
+    if (!name || !phoneNumber)
       return NextResponse.json(
         { error: "Missing row parameter" },
         { status: 400 },
       );
 
-    const row = Number(rowParam);
-    if (!Number.isInteger(row) || row <= 0)
-      return NextResponse.json(
-        { error: "Invalid row parameter" },
-        { status: 400 },
-      );
-
     const generator = new TicketGenerator();
-    const result = await generator.generateTicket(row);
+    const result = await generator.generateTicketManual(name, wijk, phoneNumber);
 
     if (!result.image) {
-      const errDetail = result.error ?? "Image not generated";
+      const errDetail = result.error ?? 'Image not generated';
       return NextResponse.json(
         { success: false, error: errDetail },
         { status: 422 },
@@ -38,8 +33,8 @@ export async function GET(request: Request) {
     return new Response(buffer as any, {
       status: 200,
       headers: {
-        "Content-Type": "image/png",
-        "Content-Disposition": `attachment; filename="${fileName}"`,
+        'Content-Type': 'image/png',
+        'Content-Disposition': `attachment; filename="${fileName}"`,
       },
     });
   } catch (err: unknown) {
