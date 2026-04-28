@@ -1,0 +1,112 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Inter, Helvetica, Arial, sans-serif;
+  color: #fff;
+}
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.tab {
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 700;
+  transition: background-color .12s, transform .06s, box-shadow .12s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+}
+.tab:hover {
+  background: rgba(255,255,255,0.08);
+  transform: translateY(-1px);
+}
+.activeTab {
+  padding: 8px 12px;
+  border: 1px solid #0070f3;
+  background: linear-gradient(180deg,#0078ff 0%,#0067df 100%);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(2,64,255,0.18);
+}
+.cameraWrap {
+  margin-bottom: 12px;
+}
+.videoContainer {
+  position: relative;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.video {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #000;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  background: rgba(0,0,0,0.35);
+}
+.controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+.uploadWrap {
+  margin-bottom: 12px;
+}
+.preview {
+  margin-top: 8px;
+}
+.preview img {
+  max-width: 240px;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.previewControls { margin-top: 6px; }
+.inputRow { display: flex; gap: 12px; align-items: flex-end; margin-top: 12px; }
+.label { display: block; margin-bottom: 6px; color: #ddd; }
+.input { width: 100%; padding: 10px; font-size: 16px; border: 1px solid #333; border-radius: 6px; background: #fff; color: #111; }
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.buttons { margin-top: 12px; display: flex; gap: 8px; }
+.primary { background: #0070f3; color: #fff; padding: 10px 14px; border: none; border-radius: 8px; box-shadow: 0 10px 30px rgba(2,84,255,0.18); font-weight: 800; cursor: pointer; }
+.primary:hover { filter: brightness(0.96); transform: translateY(-1px); }
+.warn { background: #ff6a00; color: #fff; padding: 10px 14px; border-radius: 8px; border: none; font-weight: 800; box-shadow: 0 8px 20px rgba(255,106,0,0.12); cursor: pointer; }
+.warn:hover { filter: brightness(0.96); transform: translateY(-1px); }
+.spinner { margin-top: 12px; }
+.message { margin-top: 12px; font-weight: 700; color: #ffd; }
+.result { margin-top: 12px; border: 1px solid rgba(255,255,255,0.06); padding: 12px; border-radius: 6px; background: rgba(0,0,0,0.45); }
+.resultHeader { display: flex; gap: 12px; align-items: center; }
+.resultBody { margin-top: 8px; white-space: pre-wrap; font-size: 13px; color: #eee; }
+.badgeGreen { background: #0bb35a; color: #fff; padding: 4px 8px; border-radius: 999px; font-weight: 700; }
+.badgeRed { background: #d32f2f; color: #fff; padding: 4px 8px; border-radius: 999px; font-weight: 700; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; }
+.modalContent { background: #111; color: #fff; padding: 16px; border-radius: 8px; width: 320px; }
+
+/* Scope all buttons inside the component for consistent contrast in dark mode */
+.container button {
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  cursor: pointer;
+}
+.container button:hover { background: rgba(255,255,255,0.08); }
+.container button:disabled { opacity: 0.5; cursor: not-allowed; }
