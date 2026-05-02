@@ -126,9 +126,10 @@ export default function TicketVerifier() {
     const f = e.target.files?.[0];
     if (!f) return;
     setPreviewUrl(URL.createObjectURL(f));
-    try {
+      try {
       setMessage(null);
-      const res = await QrScanner.scanImage(f, { returnDetailedScanResult: false });
+      // call scanImage without the options object to satisfy TypeScript signature
+      const res = await (QrScanner as any).scanImage(f);
       if (res) {
         const text = typeof res === "string"
           ? res
