@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Docker & Database
+
+See the Docker integration guide for how to run the Postgres database and the `web` service: [docs/docker-integration.md](docs/docker-integration.md)
+
+See the Prisma migrations guide for migration commands and environment variable notes: [docs/db-migration.md](docs/db-migration.md)
