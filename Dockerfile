@@ -1,3 +1,5 @@
+# PRISMA DB Docker For Development Purpose Only
+
 # Multi-stage Dockerfile for Next.js (app router)
 FROM node:20-slim AS builder
 

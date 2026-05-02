@@ -9,6 +9,12 @@ export async function POST(request: Request) {
     const code = body?.code;
     const markUsed = Boolean(body?.markUsed);
 
+    // Require validation secret on every request
+    const provided = request.headers.get("x-validate-secret") ?? "";
+    const secret = process.env.VALIDATION_SECRET ?? "";
+    if (!secret || provided !== secret)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
     if (!code || String(code).trim() === "")
       return NextResponse.json({ error: "Missing code" }, { status: 400 });
 

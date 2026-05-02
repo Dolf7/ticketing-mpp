@@ -17,6 +17,9 @@ export default function TicketVerifier() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showRedeemPrompt, setShowRedeemPrompt] = useState(false);
   const [redeemSecret, setRedeemSecret] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(true);
+  const [authInput, setAuthInput] = useState("");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<any>(null);
@@ -38,6 +41,36 @@ export default function TicketVerifier() {
     return () => stopCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedDeviceId]);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const s = typeof window !== "undefined" ? sessionStorage.getItem("validateSecret") : null;
+      if (s) {
+        setRedeemSecret(s);
+        try {
+          const res = await fetch("/api/ticket/validate/auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ secret: s }),
+          });
+          if (res.ok) {
+            setIsAuthorized(true);
+            setShowAuthPrompt(false);
+          } else {
+            sessionStorage.removeItem("validateSecret");
+            setIsAuthorized(false);
+            setRedeemSecret("");
+            setShowAuthPrompt(true);
+          }
+        } catch (err) {
+          setShowAuthPrompt(true);
+        }
+      } else {
+        setShowAuthPrompt(true);
+      }
+    };
+    initAuth();
+  }, []);
 
   const discoverDevices = async () => {
     try {
@@ -122,9 +155,16 @@ export default function TicketVerifier() {
       setMessage("Please provide a code first");
       return;
     }
+    const saved = typeof window !== "undefined" ? sessionStorage.getItem("validateSecret") ?? "" : "";
+    const secret = redeemSecret || saved;
+    if (!secret) {
+      setMessage("Not authorized. Please enter validation password.");
+      setShowAuthPrompt(true);
+      return;
+    }
     setIsLoading(true);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const headers: Record<string, string> = { "Content-Type": "application/json", "x-validate-secret": secret };
       const res = await fetch("/api/ticket/validate", {
         method: "POST",
         headers,
@@ -133,6 +173,11 @@ export default function TicketVerifier() {
       const json = await res.json();
       if (!res.ok) {
         setMessage(json?.error ?? "Validation error");
+        if (res.status === 403) {
+          setIsAuthorized(false);
+          sessionStorage.removeItem("validateSecret");
+          setShowAuthPrompt(true);
+        }
       } else {
         setTicketInfo(json);
         setMessage(json?.found ? "Ticket found" : "Ticket not found");
@@ -146,9 +191,16 @@ export default function TicketVerifier() {
 
   const confirmRedeem = async () => {
     if (!code || code.trim() === "") return;
+    const saved = typeof window !== "undefined" ? sessionStorage.getItem("validateSecret") ?? "" : "";
+    const secret = redeemSecret || saved;
+    if (!secret) {
+      setMessage("Not authorized. Please enter validation password.");
+      setShowAuthPrompt(true);
+      return;
+    }
     setIsLoading(true);
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json", "x-validate-secret": redeemSecret };
+      const headers: Record<string, string> = { "Content-Type": "application/json", "x-validate-secret": secret };
       const res = await fetch("/api/ticket/validate", {
         method: "POST",
         headers,
@@ -157,6 +209,11 @@ export default function TicketVerifier() {
       const json = await res.json();
       if (!res.ok) {
         setMessage(json?.error ?? "Redeem error");
+        if (res.status === 403) {
+          setIsAuthorized(false);
+          sessionStorage.removeItem("validateSecret");
+          setShowAuthPrompt(true);
+        }
       } else {
         setTicketInfo(json);
         setMessage("Redeemed");
@@ -167,6 +224,44 @@ export default function TicketVerifier() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const submitAuth = async () => {
+    if (!authInput || authInput.trim() === "") {
+      setMessage("Enter validation password");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/ticket/validate/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret: authInput.trim() }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        setMessage(json?.error ?? "Unauthorized");
+        setIsAuthorized(false);
+      } else {
+        sessionStorage.setItem("validateSecret", authInput.trim());
+        setRedeemSecret(authInput.trim());
+        setIsAuthorized(true);
+        setShowAuthPrompt(false);
+        setMessage("Authorized");
+      }
+    } catch (err: any) {
+      setMessage("Network error: " + (err?.message ?? String(err)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = () => {
+    sessionStorage.removeItem("validateSecret");
+    setRedeemSecret("");
+    setIsAuthorized(false);
+    setShowAuthPrompt(true);
+    setMessage("Logged out");
   };
 
   const copyCode = async () => {
@@ -240,11 +335,12 @@ export default function TicketVerifier() {
       </div>
 
       <div className={styles.buttons}>
-        <button className={styles.primary} onClick={() => doValidate(false)} disabled={isLoading || !code}>Validate</button>
-        <button onClick={() => doValidate(true)} disabled={isLoading || !code}>Validate & Attempt Mark</button>
+        <button className={styles.primary} onClick={() => doValidate(false)} disabled={!isAuthorized || isLoading || !code}>Validate</button>
+        <button onClick={() => doValidate(true)} disabled={!isAuthorized || isLoading || !code}>Validate & Attempt Mark</button>
         {ticketInfo?.found && ticketInfo?.status !== "REDEEMED" && (
-          <button onClick={() => setShowRedeemPrompt(true)} className={styles.warn}>Mark as Redeemed</button>
+          <button onClick={() => setShowRedeemPrompt(true)} className={styles.warn} disabled={!isAuthorized}>Mark as Redeemed</button>
         )}
+        <button onClick={logout} style={{ marginLeft: 8 }}>Logout</button>
       </div>
 
       {isLoading && <div className={styles.spinner}>Loading…</div>}
@@ -266,10 +362,24 @@ export default function TicketVerifier() {
           <div className={styles.modalContent}>
             <h3>Confirm Redeem</h3>
             <p>Enter admin secret to mark ticket as redeemed.</p>
-            <input type="password" value={redeemSecret} onChange={(e) => setRedeemSecret(e.target.value)} />
+            <input className={styles.modalInput} type="password" value={redeemSecret} onChange={(e) => setRedeemSecret(e.target.value)} onKeyDown={(e) => { if ((e as React.KeyboardEvent<HTMLInputElement>).key === "Enter") confirmRedeem(); }} />
             <div style={{ marginTop: 8 }}>
               <button onClick={confirmRedeem} disabled={!redeemSecret}>Confirm</button>
               <button onClick={() => setShowRedeemPrompt(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAuthPrompt && (
+        <div className={styles.modal} role="dialog">
+          <div className={styles.modalContent}>
+            <h3>Verifier Login</h3>
+            <p>Enter validation password to enable verification features.</p>
+            <input className={styles.modalInput} type="password" value={authInput} onChange={(e) => setAuthInput(e.target.value)} onKeyDown={(e) => { if ((e as React.KeyboardEvent<HTMLInputElement>).key === "Enter") submitAuth(); }} />
+            <div style={{ marginTop: 8 }}>
+              <button onClick={submitAuth} disabled={!authInput || isLoading}>Login</button>
+              <button onClick={() => setShowAuthPrompt(false)} style={{ marginLeft: 8 }}>Cancel</button>
             </div>
           </div>
         </div>
