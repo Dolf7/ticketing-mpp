@@ -16,6 +16,7 @@ RUN npm ci
 
 # Copy source and build
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 
 ### Runtime image
@@ -42,4 +43,4 @@ USER nextjs
 EXPOSE 3000
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["npm", "start"]
+CMD ["sh", "-lc", "npx prisma migrate deploy && npm start"]
