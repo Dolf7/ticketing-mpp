@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       if (!secret || provided !== secret)
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-      const ok = await validator.markRedeemed(found.row, "REDEEMED");
+      const ok = await validator.markRedeemed(found.row);
       return NextResponse.json(
         { found: true, row: found.row, name: found.name, status: ok ? "REDEEMED" : found.status },
         { status: 200 },

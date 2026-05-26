@@ -72,8 +72,10 @@
 .preview {
   margin-top: 8px;
 }
-.preview img {
+.preview img,
+.previewImage {
   max-width: 240px;
+  height: auto;
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.06);
@@ -95,8 +97,136 @@
 .resultBody { margin-top: 8px; white-space: pre-wrap; font-size: 13px; color: #eee; }
 .badgeGreen { background: #0bb35a; color: #fff; padding: 4px 8px; border-radius: 999px; font-weight: 700; }
 .badgeRed { background: #d32f2f; color: #fff; padding: 4px 8px; border-radius: 999px; font-weight: 700; }
+.tableSection {
+  margin-top: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(0,0,0,0.38);
+  padding: 16px;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.24);
+}
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: 20px;
+}
+.sectionHint {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.72);
+  font-size: 14px;
+}
+.tableCount {
+  min-width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,112,243,0.16);
+  color: #cfe5ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.tableMessage {
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  color: #f1f1d4;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+.table th,
+.table td {
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  vertical-align: middle;
+}
+.table th {
+  color: rgba(255,255,255,0.72);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.table tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+.ownerEditor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tableInput {
+  width: 100%;
+  min-width: 180px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.96);
+  color: #141414;
+}
+.rowActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.linkButton {
+  padding: 0 !important;
+  background: none !important;
+  color: #7cb8ff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.linkButton:hover {
+  background: none !important;
+  color: #a8d0ff !important;
+  text-decoration: underline;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.paginationSummary {
+  color: rgba(255,255,255,0.72);
+  font-size: 14px;
+}
+.paginationControls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.activePageButton {
+  background: linear-gradient(180deg,#0078ff 0%,#0067df 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgba(2,64,255,0.18);
+}
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; }
 .modalContent { background: #111; color: #fff; padding: 16px; border-radius: 8px; width: 320px; }
+.modalForm {
+  display: grid;
+  gap: 10px;
+}
+.modalActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 
 /* Inputs inside modals (login / redeem) - dark themed and readable */
 .modalInput {
@@ -126,3 +256,45 @@
 }
 .container button:hover { background: rgba(255,255,255,0.08); }
 .container button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 720px) {
+  .inputRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    flex-direction: row;
+  }
+
+  .buttons {
+    flex-wrap: wrap;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ownerEditor {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rowActions {
+    flex-direction: column;
+  }
+
+  .pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .paginationControls {
+    width: 100%;
+  }
+
+  .modalContent {
+    width: min(92vw, 360px);
+  }
+}
