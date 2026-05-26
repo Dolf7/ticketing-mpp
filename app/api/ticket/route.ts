@@ -16,11 +16,12 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const query = url.searchParams.get("q") ?? "";
-    const limitParam = Number(url.searchParams.get("limit") ?? "25");
+    const pageParam = Number(url.searchParams.get("page") ?? "1");
+    const pageSizeParam = Number(url.searchParams.get("pageSize") ?? url.searchParams.get("limit") ?? "25");
     const validator = new TicketValidator();
-    const tickets = await validator.listTickets(query, limitParam);
+    const result = await validator.listTickets(query, pageParam, pageSizeParam);
 
-    return NextResponse.json({ tickets }, { status: 200 });
+    return NextResponse.json(result, { status: 200 });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: msg }, { status: 500 });

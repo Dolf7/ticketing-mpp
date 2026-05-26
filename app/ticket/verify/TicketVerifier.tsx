@@ -39,6 +39,9 @@ type ValidationResult = {
 
 type TicketListResponse = {
   tickets?: TicketRow[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
   error?: string;
 };
 
@@ -82,6 +85,7 @@ export default function TicketVerifier() {
   const [showAuthPrompt, setShowAuthPrompt] = useState(true);
   const [authInput, setAuthInput] = useState("");
   const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [totalTickets, setTotalTickets] = useState(0);
   const [tableMessage, setTableMessage] = useState<string | null>(null);
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [showCreatePrompt, setShowCreatePrompt] = useState(false);
@@ -147,14 +151,19 @@ export default function TicketVerifier() {
   useEffect(() => {
     if (!isAuthorized) {
       setTickets([]);
+      setTotalTickets(0);
       setTableMessage(null);
       setCurrentPage(1);
       return;
     }
 
-    void fetchTickets();
+    const timeout = window.setTimeout(() => {
+      void fetchTickets(currentPage, code);
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthorized]);
+  }, [isAuthorized, currentPage, code]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -169,11 +178,13 @@ export default function TicketVerifier() {
     setShowAuthPrompt(true);
     setTableMessage(null);
     setTickets([]);
+    setTotalTickets(0);
     setMessage(nextMessage);
   };
 
-  const applyTicketRows = (nextTickets: TicketRow[]) => {
+  const applyTicketRows = (nextTickets: TicketRow[], total = 0) => {
     setTickets(nextTickets);
+    setTotalTickets(total);
     setOwnerDrafts((current) => {
       const nextDrafts: Record<number, string> = {};
       nextTickets.forEach((ticket) => {
@@ -186,10 +197,14 @@ export default function TicketVerifier() {
   const upsertTicketRow = (nextTicket: TicketRow, prepend = false) => {
     setTickets((current) => {
       const index = current.findIndex((ticket) => ticket.id === nextTicket.id);
-      if (index === -1) return prepend ? [nextTicket, ...current] : [...current, nextTicket];
+      if (index === -1) {
+        const nextTickets = prepend ? [nextTicket, ...current] : [...current, nextTicket];
+        return nextTickets.slice(0, PAGE_SIZE);
+      }
       return current.map((ticket) => ticket.id === nextTicket.id ? nextTicket : ticket);
     });
     setOwnerDrafts((current) => ({ ...current, [nextTicket.id]: nextTicket.owner ?? "" }));
+    if (prepend) setTotalTickets((current) => current + 1);
     setTableMessage(null);
   };
 
@@ -213,7 +228,7 @@ export default function TicketVerifier() {
     }));
   };
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (page = currentPage, query = code) => {
     const secret = redeemSecret || getStoredSecret();
     if (!secret) return;
 
@@ -223,7 +238,9 @@ export default function TicketVerifier() {
 
     try {
       const params = new URLSearchParams();
-      params.set("limit", "500");
+      params.set("page", String(page));
+      params.set("pageSize", String(PAGE_SIZE));
+      if (query.trim()) params.set("q", query.trim());
 
       const res = await fetch(`/api/ticket?${params.toString()}`, {
         headers: { "x-validate-secret": secret },
@@ -237,14 +254,15 @@ export default function TicketVerifier() {
           handleUnauthorized();
           return;
         }
-        applyTicketRows([]);
+        applyTicketRows([], 0);
         setTableMessage(json?.error ?? "Unable to load tickets");
         return;
       }
 
       const nextTickets = Array.isArray(json.tickets) ? json.tickets : [];
-      applyTicketRows(nextTickets);
-      setTableMessage(nextTickets.length === 0 ? "No tickets available yet." : null);
+      const nextTotal = typeof json.total === "number" ? json.total : nextTickets.length;
+      applyTicketRows(nextTickets, nextTotal);
+      setTableMessage(nextTotal === 0 ? (query.trim() ? "No tickets match the current search." : "No tickets available yet.") : null);
     } catch (err: unknown) {
       if (requestId !== ticketsRequestRef.current) return;
       setTableMessage("Network error: " + getErrorMessage(err));
@@ -358,7 +376,10 @@ export default function TicketVerifier() {
       } else {
         setTicketInfo(json);
         setMessage(json?.found ? "Ticket found" : "Ticket not found");
-        if (json?.found) patchTicketFromValidation(json);
+        if (json?.found) {
+          patchTicketFromValidation(json);
+          void fetchTickets(currentPage, code);
+        }
       }
     } catch (err: unknown) {
       setMessage("Network error: " + getErrorMessage(err));
@@ -395,6 +416,7 @@ export default function TicketVerifier() {
         setMessage("Redeemed");
         setShowRedeemPrompt(false);
         patchTicketFromValidation(json);
+        void fetchTickets(currentPage, code);
       }
     } catch (err: unknown) {
       setMessage("Network error: " + getErrorMessage(err));
@@ -439,6 +461,7 @@ export default function TicketVerifier() {
     setIsAuthorized(false);
     setShowAuthPrompt(true);
     setTickets([]);
+    setTotalTickets(0);
     setTableMessage(null);
     setMessage("Logged out");
   };
@@ -499,9 +522,18 @@ export default function TicketVerifier() {
       setShowCreatePrompt(false);
       setCreateCode("");
       setCreateOwner("");
-      if (json.ticket) upsertTicketRow(json.ticket, true);
+      const currentQuery = code.trim().toLowerCase();
+      const matchesCurrentQuery = json.ticket && (
+        !currentQuery
+        || json.ticket.ticketCode.toLowerCase().includes(currentQuery)
+        || (json.ticket.owner ?? "").toLowerCase().includes(currentQuery)
+      );
+      if (json.ticket && currentPage === 1 && matchesCurrentQuery) {
+        upsertTicketRow(json.ticket, true);
+      }
       setCurrentPage(1);
       setMessage("Ticket created");
+      void fetchTickets(1, code);
     } catch (err: unknown) {
       setMessage("Network error: " + getErrorMessage(err));
     } finally {
@@ -539,6 +571,7 @@ export default function TicketVerifier() {
 
       if (json.ticket) upsertTicketRow(json.ticket);
       setMessage("Ticket name updated");
+      void fetchTickets(currentPage, code);
     } catch (err: unknown) {
       setMessage("Network error: " + getErrorMessage(err));
     } finally {
@@ -576,6 +609,7 @@ export default function TicketVerifier() {
 
       if (json.ticket) upsertTicketRow(json.ticket);
       setMessage(validate ? "Ticket validated" : "Ticket marked as un-validated");
+      void fetchTickets(currentPage, code);
     } catch (err: unknown) {
       setMessage("Network error: " + getErrorMessage(err));
     } finally {
@@ -583,17 +617,9 @@ export default function TicketVerifier() {
     }
   };
 
-  const query = code.trim().toLowerCase();
-  const filteredTickets = tickets.filter((ticket) => {
-    if (!query) return true;
-
-    const owner = (ticket.owner ?? "").toLowerCase();
-    return ticket.ticketCode.toLowerCase().includes(query) || owner.includes(query);
-  });
-  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalTickets / PAGE_SIZE));
   const page = Math.min(currentPage, totalPages);
   const pageStart = (page - 1) * PAGE_SIZE;
-  const pagedTickets = filteredTickets.slice(pageStart, pageStart + PAGE_SIZE);
   const pageWindowStart = Math.max(1, Math.min(page - 2, Math.max(1, totalPages - 4)));
   const pageWindowEnd = Math.min(totalPages, pageWindowStart + 4);
   const pageNumbers: number[] = [];
@@ -687,18 +713,15 @@ export default function TicketVerifier() {
         <div className={styles.sectionHeader}>
           <div>
             <h2 className={styles.sectionTitle}>Ticket table</h2>
-            <p className={styles.sectionHint}>Loaded once locally, then filtered and paginated from the verifier input above.</p>
+            <p className={styles.sectionHint}>Search runs across all tickets through the API, with paginated results below.</p>
           </div>
-          <span className={styles.tableCount}>{filteredTickets.length} of {tickets.length} ticket{tickets.length === 1 ? "" : "s"}</span>
+          <span className={styles.tableCount}>{totalTickets} ticket{totalTickets === 1 ? "" : "s"}</span>
         </div>
 
         {isTableLoading && <div className={styles.spinner}>Loading tickets…</div>}
         {!isTableLoading && tableMessage && <div className={styles.tableMessage}>{tableMessage}</div>}
-        {!isTableLoading && !tableMessage && tickets.length > 0 && filteredTickets.length === 0 && (
-          <div className={styles.tableMessage}>No tickets match the current search.</div>
-        )}
 
-        {!isTableLoading && filteredTickets.length > 0 && (
+        {!isTableLoading && tickets.length > 0 && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -710,7 +733,7 @@ export default function TicketVerifier() {
                 </tr>
               </thead>
               <tbody>
-                {pagedTickets.map((ticket) => {
+                {tickets.map((ticket) => {
                   const ownerValue = ownerDrafts[ticket.id] ?? "";
                   const saveDisabled = rowActionKey !== null || ownerValue.trim() === (ticket.owner ?? "").trim();
                   const toggleKey = `${ticket.validate ? "unvalidate" : "validate"}-${ticket.id}`;
@@ -753,7 +776,7 @@ export default function TicketVerifier() {
 
             <div className={styles.pagination}>
               <div className={styles.paginationSummary}>
-                Showing {pageStart + 1} to {Math.min(pageStart + PAGE_SIZE, filteredTickets.length)} of {filteredTickets.length}
+                Showing {totalTickets === 0 ? 0 : pageStart + 1} to {Math.min(pageStart + tickets.length, totalTickets)} of {totalTickets}
               </div>
               <div className={styles.paginationControls}>
                 <button onClick={() => setCurrentPage(page - 1)} disabled={page <= 1}>Previous</button>

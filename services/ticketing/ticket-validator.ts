@@ -11,6 +11,13 @@ export type TicketRecord = {
   status: "REDEEMED" | "VALID";
 };
 
+export type TicketListPage = {
+  tickets: TicketRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export default class TicketValidator {
   constructor() {}
 
@@ -48,28 +55,40 @@ export default class TicketValidator {
     }
   }
 
-  public async listTickets(query?: string, limit = 25): Promise<TicketRecord[]> {
+  public async listTickets(query?: string, page = 1, pageSize = 25): Promise<TicketListPage> {
     try {
       const trimmedQuery = query?.trim();
-      const safeLimit = Number.isFinite(limit) ? Math.min(Math.max(limit, 1), 100) : 25;
-      const tickets = await prisma.ticket.findMany({
-        where: trimmedQuery
-          ? {
-              OR: [
-                { ticketCode: { contains: trimmedQuery, mode: "insensitive" } },
-                { owner: { contains: trimmedQuery, mode: "insensitive" } },
-              ],
-            }
-          : undefined,
-        orderBy: [{ id: "desc" }],
-        take: safeLimit,
-      });
+      const safePage = Number.isFinite(page) ? Math.max(page, 1) : 1;
+      const safePageSize = Number.isFinite(pageSize) ? Math.min(Math.max(pageSize, 1), 100) : 25;
+      const where = trimmedQuery
+        ? {
+            OR: [
+              { ticketCode: { contains: trimmedQuery, mode: "insensitive" as const } },
+              { owner: { contains: trimmedQuery, mode: "insensitive" as const } },
+            ],
+          }
+        : undefined;
 
-      return tickets.map((ticket) => this.mapTicket(ticket));
+      const [tickets, total] = await Promise.all([
+        prisma.ticket.findMany({
+          where,
+          orderBy: [{ id: "desc" }],
+          skip: (safePage - 1) * safePageSize,
+          take: safePageSize,
+        }),
+        prisma.ticket.count({ where }),
+      ]);
+
+      return {
+        tickets: tickets.map((ticket) => this.mapTicket(ticket)),
+        total,
+        page: safePage,
+        pageSize: safePageSize,
+      };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.error("listTickets error", { error: msg, query, limit });
-      return [];
+      logger.error("listTickets error", { error: msg, query, page, pageSize });
+      return { tickets: [], total: 0, page: 1, pageSize: 25 };
     }
   }
 
